@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Arlen Mateus Mendes - 201520121
 # Luiz Otavio Soares - 201810544
 
