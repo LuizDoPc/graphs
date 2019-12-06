@@ -17,15 +17,14 @@ restrictionsTeachers = pd.read_excel(filePath, sheet_name='Restricao')
 restrictionsClass = pd.read_excel(filePath, sheet_name='Restricoes Turma')
 preferences = pd.read_excel(filePath, sheet_name='Preferencias')
 
-
 #####################################################
 ####      Importacao de dados - fim              ####
 #####################################################
 
-
 #####################################################
 ####                Estruturas                   ####
 #####################################################
+
 
 class Vertex:
     def __init__(self, id, teacher, schoolClass, theme):
@@ -76,10 +75,10 @@ class Vertex:
 ####             Estruturas - fim                ####
 #####################################################
 
-
 #####################################################
 #### Funcoes Genericas
 #####################################################
+
 
 def creatematrixSchedules(dataToBuild):
     matrixRestrictions = {}
@@ -145,22 +144,25 @@ def createGraph():
     for i in graph:
         # arestas/lista de adjacencia
         for j in graph:
-            if (i.id != j.id and (i.teacher == j.teacher or i.schoolClass == j.schoolClass)):
+            if (i.id != j.id and
+                (i.teacher == j.teacher or i.schoolClass == j.schoolClass)):
                 i.addAdjacent(j)
 
         # Restricoes Professores
-        # if i.teacher in matrixRestrictionsTeachers:
-        #     for day in matrixRestrictionsTeachers[i.teacher].keys():
-        #         for schedule in matrixRestrictionsTeachers[i.teacher][day]:
-        #             if colors[day + '-' + schedule] not in i.restrictionsColors:
-        #                 i.addRestrictionColor(colors[day + '-' + schedule])
+        if i.teacher in matrixRestrictionsTeachers:
+            for day in matrixRestrictionsTeachers[i.teacher].keys():
+                for schedule in matrixRestrictionsTeachers[i.teacher][day]:
+                    if colors[day + '-' +
+                              schedule] not in i.restrictionsColors:
+                        i.addRestrictionColor(colors[day + '-' + schedule])
 
         # Restricoes Turmas
-        # if i.schoolClass in matrixRestrictionsClasses:
-        #     for day in matrixRestrictionsClasses[i.schoolClass].keys():
-        #         for schedule in matrixRestrictionsClasses[i.schoolClass][day]:
-        #             if colors[day + '-' + schedule] not in i.restrictionsColors:
-        #                 i.addRestrictionColor(colors[day + '-' + schedule])
+        if i.schoolClass in matrixRestrictionsClasses:
+            for day in matrixRestrictionsClasses[i.schoolClass].keys():
+                for schedule in matrixRestrictionsClasses[i.schoolClass][day]:
+                    if colors[day + '-' +
+                              schedule] not in i.restrictionsColors:
+                        i.addRestrictionColor(colors[day + '-' + schedule])
 
     return graph
 
@@ -169,12 +171,14 @@ def createGraph():
 ####         Funcoes auxiliares Dsatur
 #####################################################
 
+
 def getBiggerSaturVertexId(graph):
     actual = None
 
     for ver in graph:
-        if ver.color == 0 and (actual is None or ver.satur > actual.satur or (
-                ver.satur == actual.satur and ver.degree > actual.degree)):
+        if ver.color == 0 and (actual is None or ver.satur > actual.satur or
+                               (ver.satur == actual.satur
+                                and ver.degree > actual.degree)):
             actual = ver
     return actual
 
@@ -201,7 +205,7 @@ def toColor(vertex):
 def dsatur(graph):
     if allColorful(graph):
         return True
-    while(allColorful(graph) == False):
+    while (allColorful(graph) == False):
         vertexBiggerSatur = getBiggerSaturVertexId(graph)
         # print(vertexBiggerSatur.id)
         # print(vertexBiggerSatur.schoolClass)
@@ -229,16 +233,53 @@ if dsatur(graph):
         else:
             schoolClasses[v.schoolClass] = [v]
 
+    file = open('out.csv', 'w')
+
     for sc, listSC in schoolClasses.items():
         listSC.sort(key=lambda s: s.color)
-        if sc == 6:
-            print('\nTurma ' + str(sc))
-            for scItem in listSC:
-                print('\n' + scItem.schedule)
-                print(scItem.color)
-                print(scItem.teacher)
-                print('Materia: ' + scItem.theme)
 
+        file.write('\n\nTurma: ' + str(sc) + ',')
+        segunda = []
+        terca = []
+        quarta = []
+        quinta = []
+        sexta = []
+        week = [segunda, terca, quarta, quinta, sexta]
+        for scItem in listSC:
+            if 'Segunda' in scItem.schedule:
+                segunda.append(scItem)
+            elif 'Terça' in scItem.schedule:
+                terca.append(scItem)
+            elif 'Quarta' in scItem.schedule:
+                quarta.append(scItem)
+            elif 'Quinta' in scItem.schedule:
+                quinta.append(scItem)
+            else:
+                sexta.append(scItem)
+
+        for day in week:
+            for scItem in day:
+                scItem.schedule = time.strptime(
+                    scItem.schedule.split('-')[1], '%H:%M')
+            day.sort(key=lambda s: s.schedule)
+
+        for horario in schedulesConfig():
+            file.write(horario + ',')
+        file.write('\nSegunda,')
+        for aula in segunda:
+            file.write(aula.teacher + ' - Matéria: ' + aula.theme + ',')
+        file.write('\nTerça,')
+        for aula in terca:
+            file.write(aula.teacher + ' - Matéria: ' + aula.theme + ',')
+        file.write('\nQuarta,')
+        for aula in quarta:
+            file.write(aula.teacher + ' - Matéria: ' + aula.theme + ',')
+        file.write('\nQuinta,')
+        for aula in quinta:
+            file.write(aula.teacher + ' - Matéria: ' + aula.theme + ',')
+        file.write('\nSexta,')
+        for aula in sexta:
+            file.write(aula.teacher + ' - Matéria: ' + aula.theme + ',')
 
 else:
     print('Que merda!')
