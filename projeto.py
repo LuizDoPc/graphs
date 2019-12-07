@@ -357,44 +357,10 @@ def improvement(graph, data):
 #####################################################
 
 
-def main():
-    data = GlobalData()
-    graph = createGraph(data)
-
-    if dsatur(graph, data.colorsUsed):
-        improvement(graph, data)
-    else:
-        print('Erro ao executar o Dsatur')
-
-
-if dsatur(graph):
-    colorsTest.sort()
-    print(colorsTest)
-    colorfulValid = []
-    colorfulInvalid = []
-    for v in graph:
-        if v.color in colors.values():
-            colorfulValid.append(v)
-        else:
-            colorfulInvalid.append(v)
-
-    print('Quantidade de cores: ' + str(len(colorsTest)))
-
-    for schedule, c in colors.items():
-        print('Dia/Horario: ' + schedule)
-        for v in colorfulValid:
-            if v.color == c:
-                print('Turma: ', v.schoolClass, ' - ', v.teacher, ' - Materia', v.theme)
-
-    print('Sem horario: ')
-    for v in colorfulInvalid:
-        if v.color == c:
-            print('Turma: ', v.schoolClass, ' - ', v.teacher, ' - Materia', v.theme)
-
-    print('bom')
+def generateCsv(graph, data):
     schoolClasses = {}
     for v in graph:
-        for schedule, color in colors.items():
+        for schedule, color in data.colorsSchedules.items():
             if color == v.color:
                 v.schedule = schedule
 
@@ -416,8 +382,8 @@ if dsatur(graph):
                     week[day].append(scItem)
 
         for day in week.keys():
-            if len(week[day]) < len(schedulesConfig()):
-                scheduleList = schedulesConfig()
+            if len(week[day]) < len(data.settings):
+                scheduleList = data.settings
                 for i in range(len(scheduleList)):
                     foundClass = False
                     for cls in week[day]:
@@ -426,7 +392,7 @@ if dsatur(graph):
                     if not foundClass:
                         week[day].insert(i, None)
 
-        matrixPlot = [schedulesConfig()]
+        matrixPlot = [data.settings]
 
         for day in week.keys():
             textList = []
@@ -441,12 +407,19 @@ if dsatur(graph):
         for day in week.keys():
             header.append(day)
 
-        fig = go.Figure(data=[go.Table(header=dict(values=header),cells=dict(values=matrixPlot))])
+        fig = go.Figure(data=[go.Table(header=dict(values=header), cells=dict(values=matrixPlot))])
         fig.show()
 
 
-else:
-    print('Que merda!')
+def main():
+    data = GlobalData()
+    graph = createGraph(data)
+
+    if dsatur(graph, data.colorsUsed):
+        improvement(graph, data)
+        generateCsv(graph, data)
+    else:
+        print('Erro ao executar o Dsatur')
 
 
 startTime = time.time()
