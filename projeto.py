@@ -471,7 +471,7 @@ def main():
     setColorsPreferencesBeforeDsatur(graph, data)
     if dsatur(graph, data.colorsUsed):
         improvement(graph, data)
-        # generateCsv(graph, data)
+        generateCsv(graph, data)
         print(data.metedPreferences)
 
         if len(data.colorsSchedules) >= len(data.colorsUsed):
