@@ -61,14 +61,9 @@ class Vertex:
         for vertex in self.adjacents:
             vertex.upSatur()
 
-    def addColorInRestricitionsColorsOfAdjacents(self, c):
-        for vertex in self.adjacents:
-            vertex.addRestrictionColor(c)
-
     def setColor(self, c):
         self.color = c
         self.upSaturAdjacents()
-        self.addColorInRestricitionsColorsOfAdjacents(c)
 
 
 #####################################################
@@ -81,20 +76,20 @@ class Vertex:
 
 
 def creatematrixSchedules(dataToBuild):
-    matrixRestrictions = {}
+    matrix = {}
 
     for _, row in dataToBuild.iterrows():
 
-        if row[0] not in matrixRestrictions.keys():
-            matrixRestrictions[row[0]] = {}
+        if row[0] not in matrix.keys():
+            matrix[row[0]] = {}
 
-        if row[2] not in matrixRestrictions[row[0]].keys():
-            matrixRestrictions[row[0]][row[2]] = []
+        if row[2] not in matrix[row[0]].keys():
+            matrix[row[0]][row[2]] = []
 
-        if row[1] not in matrixRestrictions[row[0]][row[2]]:
-            matrixRestrictions[row[0]][row[2]].append(row[1].strftime("%H:%M"))
+        if row[1] not in matrix[row[0]][row[2]]:
+            matrix[row[0]][row[2]].append(row[1].strftime("%H:%M"))
 
-    return matrixRestrictions
+    return matrix
 
 
 def schedulesConfig():
@@ -173,17 +168,21 @@ def createGraph():
 def verifyNextTwoSchedules(vertex, color, graph, scheduleConfig):
     amountSchedulesPerDay = len(scheduleConfig)
 
+    if amountSchedulesPerDay < 3:
+        return True
+
     colorKey = ''
     for key, value in colors.items():
         if value == color:
             colorKey = key
             break
 
-    if schedulesConfig()[amountSchedulesPerDay - 1] in colorKey:
+    if scheduleConfig[amountSchedulesPerDay - 1] in colorKey:
         return True
-    elif schedulesConfig()[amountSchedulesPerDay - 2] in colorKey:
+    elif scheduleConfig[amountSchedulesPerDay - 2] in colorKey:
         return True
     else:
+        response = False
         for v in graph:
             if v.theme == vertex.theme and v.schoolClass == vertex.schoolClass and colorKey.split('-')[0] in v.schedule:
                 if scheduleConfig.index(v.schedule.split('-')[1]) - 1 == scheduleConfig.index(colorKey.split('-')[1]):
@@ -191,8 +190,66 @@ def verifyNextTwoSchedules(vertex, color, graph, scheduleConfig):
                     for j in graph:
                         if j.theme == vertex.theme and j.schoolClass == vertex.schoolClass and colorKey.split('-')[0] in v.schedule:
                             if scheduleConfig.index(j.schedule.split('-')[1]) - 2 == scheduleConfig.index(colorKey.split('-')[1]):
-                                return False
-    return True
+                                response = False
+        return response
+
+
+def verifyTwoPreviousSchedules(vertex, color, graph, scheduleConfig):
+    amountSchedulesPerDay = len(scheduleConfig)
+
+    if amountSchedulesPerDay < 3:
+        return True
+
+    colorKey = ''
+    for key, value in colors.items():
+        if value == color:
+            colorKey = key
+            break
+
+    if scheduleConfig[0] in colorKey:
+        return True
+    elif scheduleConfig[1] in colorKey:
+        return True
+    else:
+        response = True
+        for v in graph:
+            if v.theme == vertex.theme and v.schoolClass == vertex.schoolClass and colorKey.split('-')[0] in v.schedule:
+                if scheduleConfig.index(v.schedule.split('-')[1]) + 1 == scheduleConfig.index(colorKey.split('-')[1]):
+
+                    for j in graph:
+                        if j.theme == vertex.theme and j.schoolClass == vertex.schoolClass and colorKey.split('-')[0] in v.schedule:
+                            if scheduleConfig.index(j.schedule.split('-')[1]) + 2 == scheduleConfig.index(colorKey.split('-')[1]):
+                                response = False
+        return response
+
+
+def verifyNextAndPreviousSchedule(vertex, color, graph, scheduleConfig):
+    amountSchedulesPerDay = len(scheduleConfig)
+
+    if amountSchedulesPerDay < 3:
+        return True
+
+    colorKey = ''
+    for key, value in colors.items():
+        if value == color:
+            colorKey = key
+            break
+
+    if scheduleConfig[0] in colorKey:
+        return True
+    elif scheduleConfig[amountSchedulesPerDay - 1] in colorKey:
+        return True
+    else:
+        response = False
+        for v in graph:
+            if v.theme == vertex.theme and v.schoolClass == vertex.schoolClass and colorKey.split('-')[0] in v.schedule:
+                if scheduleConfig.index(v.schedule.split('-')[1]) - 1 == scheduleConfig.index(colorKey.split('-')[1]):
+
+                    for j in graph:
+                        if j.theme == vertex.theme and j.schoolClass == vertex.schoolClass and colorKey.split('-')[0] in v.schedule:
+                            if scheduleConfig.index(j.schedule.split('-')[1]) + 1 == scheduleConfig.index(colorKey.split('-')[1]):
+                                response = False
+        return response
 
 
 
@@ -213,9 +270,7 @@ def getBiggerSaturVertexId(graph):
     actual = None
 
     for ver in graph:
-        if ver.color == 0 and (actual is None or ver.satur > actual.satur or
-                               (ver.satur == actual.satur
-                                and ver.degree > actual.degree)):
+        if ver.color == 0 and (actual is None or ver.satur > actual.satur or (ver.satur == actual.satur and ver.degree > actual.degree)):
             actual = ver
     return actual
 
@@ -227,13 +282,33 @@ def allColorful(graph):
     return True
 
 
+colorsTest = []
+
+
 def toColor(vertex, graph, schedulesConfig):
+    # for c in colors.values():
+    #     if c not in vertex.restrictionsColors:
+    #         vertex.setColor(c)
+    #         break
 
+    c = 1
+    valid = False
+    while not valid:
+        valid = True
+        if c not in vertex.restrictionsColors:
+            for adj in vertex.adjacents:
+                if adj.color == c:
+                    valid = False
+                    break
+            if valid:
+                vertex.setColor(c)
+                if c not in colorsTest:
+                    colorsTest.append(c)
 
-    for color in colors.values():
-        if verifyNextTwoSchedules(vertex, color, graph, schedulesConfig) and color not in vertex.restrictionsColors:
-            vertex.setColor(color)
-            break
+        else:
+            valid = False
+
+        c += 1
 
 
 #####################################################
@@ -242,7 +317,6 @@ def toColor(vertex, graph, schedulesConfig):
 
 
 def dsatur(graph):
-
     schedulesConfigVector = schedulesConfig()
     if allColorful(graph):
         return True
@@ -260,9 +334,59 @@ def dsatur(graph):
 graph = createGraph()
 
 if dsatur(graph):
+    colorsTest.sort()
+    print(colorsTest)
+    reducedColors = []
+    while reducedColors != colorsTest:
+        reducedColors = colorsTest
+        colorsTest = []
+        for c in reducedColors:
+            for v in graph:
+                if v.color == c:
+                    i = 1
+                    colorful = False
+                    while i in colors.values() and not colorful:
+                        if i not in v.restrictionsColors and i != v.color:
+
+                            valid = True
+
+                            for adj in v.adjacents:
+                                if adj.color == i:
+                                    valid = False
+                                    break
+
+                            if valid:
+                                # aqui seta a cor direto ao inves de usar a funcao setColor pois dsatur nao sera mais usado
+                                v.color = i
+                                colorful = True
+
+                            if v.color not in colorsTest:
+                                colorsTest.append(v.color)
+                        i += 1
+    colorsTest.sort()
+    print(colorsTest)
+    colorfulValid = []
+    colorfulInvalid = []
+    for v in graph:
+        if v.color in colors.values():
+            colorfulValid.append(v)
+        else:
+            colorfulInvalid.append(v)
+
+    print('Quantidade de cores: ' + str(len(colorsTest)))
+
+    for schedule, c in colors.items():
+        print('Dia/Horario: ' + schedule)
+        for v in colorfulValid:
+            if v.color == c:
+                print('Turma: ', v.schoolClass, ' - ', v.teacher, ' - Materia', v.theme)
+
+    print('Sem horario: ')
+    for v in colorfulInvalid:
+        if v.color == c:
+            print('Turma: ', v.schoolClass, ' - ', v.teacher, ' - Materia', v.theme)
 
     print('bom')
-
     schoolClasses = {}
     for v in graph:
         for schedule, color in colors.items():
