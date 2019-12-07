@@ -100,8 +100,8 @@ def creatematrixSchedules(dataToBuild):
 
 def schedulesConfig():
     schedulesConf = []
-    for _, schedule in config.iterrows():
-        schedulesConf.append(schedule[0].strftime("%H:%M"))
+    for _, s in config.iterrows():
+        schedulesConf.append(s[0].strftime("%H:%M"))
 
     return schedulesConf
 
@@ -164,6 +164,43 @@ def createGraph():
 
     return graph
 
+#####################################################
+####         Funcoes de verificacao
+#####################################################
+
+def verifyNextTwoSchedules(vertex, color, graph, scheduleConfig):
+    amountSchedulesPerDay = len(scheduleConfig)
+
+    colorKey = ''
+    for key, value in colors.items():
+        if value == color:
+            colorKey = key
+            break
+
+    if schedulesConfig()[amountSchedulesPerDay - 1] in colorKey:
+        return True
+    elif schedulesConfig()[amountSchedulesPerDay - 2] in colorKey:
+        return True
+    else:
+        for v in graph:
+            if v.theme == vertex.theme and v.schoolClass == vertex.schoolClass and colorKey.split('-')[0] in v.schedule:
+                if scheduleConfig.index(v.schedule.split('-')[1]) - 1 == scheduleConfig.index(colorKey.split('-')[1]):
+
+                    for j in graph:
+                        if j.theme == vertex.theme and j.schoolClass == vertex.schoolClass and colorKey.split('-')[0] in v.schedule:
+                            if scheduleConfig.index(j.schedule.split('-')[1]) - 2 == scheduleConfig.index(colorKey.split('-')[1]):
+                                return False
+    return True
+
+
+
+
+
+#####################################################
+####         Funcoes de verificacao - fim
+#####################################################
+
+
 
 #####################################################
 ####         Funcoes auxiliares Dsatur
@@ -186,9 +223,11 @@ def allColorful(graph):
     return True
 
 
-def toColor(vertex):
+def toColor(vertex, graph, schedulesConfig):
+
+
     for color in colors.values():
-        if color not in vertex.restrictionsColors:
+        if verifyNextTwoSchedules(vertex, color, graph, schedulesConfig) and color not in vertex.restrictionsColors:
             vertex.setColor(color)
             break
 
@@ -199,6 +238,8 @@ def toColor(vertex):
 
 
 def dsatur(graph):
+
+    schedulesConfigVector = schedulesConfig()
     if allColorful(graph):
         return True
     while(allColorful(graph) == False):
@@ -208,7 +249,7 @@ def dsatur(graph):
         # print(vertexBiggerSatur.satur)
         # print(vertexBiggerSatur.color)
         # print(vertexBiggerSatur)
-        toColor(vertexBiggerSatur)
+        toColor(vertexBiggerSatur, graph, schedulesConfigVector)
     return True
 
 
