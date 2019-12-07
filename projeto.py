@@ -399,7 +399,6 @@ def setColorsPreferencesBeforeDsatur(graph, data):
                 if preferencesMetedCount == preferencesCount:
                     data.metedPreferences[teacher] = True
                 else:
-                    print(notColorful)
                     data.metedPreferences[teacher] = False
 
         else:
