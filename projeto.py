@@ -1,6 +1,8 @@
 import sys
 import pandas as pd
 import time
+import plotly.graph_objects as go
+
 
 #####################################################
 ####         Importacao de dados                 ####
@@ -401,53 +403,47 @@ if dsatur(graph):
         else:
             schoolClasses[v.schoolClass] = [v]
 
-    file = open('out.csv', 'w')
-
     for sc, listSC in schoolClasses.items():
         listSC.sort(key=lambda s: s.color)
 
-        file.write('\n\nTurma: ' + str(sc) + ',')
-        segunda = []
-        terca = []
-        quarta = []
-        quinta = []
-        sexta = []
-        week = [segunda, terca, quarta, quinta, sexta]
-        for scItem in listSC:
-            if 'Segunda' in scItem.schedule:
-                segunda.append(scItem)
-            elif 'Terça' in scItem.schedule:
-                terca.append(scItem)
-            elif 'Quarta' in scItem.schedule:
-                quarta.append(scItem)
-            elif 'Quinta' in scItem.schedule:
-                quinta.append(scItem)
-            else:
-                sexta.append(scItem)
+        week = {}
 
-        for day in week:
-            for scItem in day:
-                scItem.schedule = time.strptime(
-                    scItem.schedule.split('-')[1], '%H:%M')
-            day.sort(key=lambda s: s.schedule)
+        for day in ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']:
+            for scItem in listSC:
+                if day in scItem.schedule:
+                    if day not in week.keys():
+                        week[day] = []
+                    week[day].append(scItem)
 
-        for horario in schedulesConfig():
-            file.write(horario + ',')
-        file.write('\nSegunda,')
-        for aula in segunda:
-            file.write(aula.teacher + ' - Matéria: ' + aula.theme + ',')
-        file.write('\nTerça,')
-        for aula in terca:
-            file.write(aula.teacher + ' - Matéria: ' + aula.theme + ',')
-        file.write('\nQuarta,')
-        for aula in quarta:
-            file.write(aula.teacher + ' - Matéria: ' + aula.theme + ',')
-        file.write('\nQuinta,')
-        for aula in quinta:
-            file.write(aula.teacher + ' - Matéria: ' + aula.theme + ',')
-        file.write('\nSexta,')
-        for aula in sexta:
-            file.write(aula.teacher + ' - Matéria: ' + aula.theme + ',')
+        for day in week.keys():
+            if len(week[day]) < len(schedulesConfig()):
+                scheduleList = schedulesConfig()
+                for i in range(len(scheduleList)):
+                    foundClass = False
+                    for cls in week[day]:
+                        if cls is not None and scheduleList[i] in cls.schedule:
+                            foundClass = True
+                    if not foundClass:
+                        week[day].insert(i, None)
+
+        matrixPlot = [schedulesConfig()]
+
+        for day in week.keys():
+            textList = []
+            for cls in week[day]:
+                if cls is None:
+                    textList.append(None)
+                else:
+                    textList.append(cls.teacher + ' - Matéria: ' + cls.theme)
+            matrixPlot.append(textList)
+
+        header = ["<b>" + str(sc) + "</b>"]
+        for day in week.keys():
+            header.append(day)
+
+        fig = go.Figure(data=[go.Table(header=dict(values=header),cells=dict(values=matrixPlot))])
+        fig.show()
+
 
 else:
     print('Que merda!')
