@@ -14,7 +14,7 @@ dataSchool = pd.read_excel(filePath, sheet_name='Dados')
 config = pd.read_excel(filePath, sheet_name='Configuracoes')
 restrictionsTeachers = pd.read_excel(filePath, sheet_name='Restricao')
 restrictionsClass = pd.read_excel(filePath, sheet_name='Restricoes Turma')
-preferences = pd.read_excel(filePath, sheet_name='Preferencias')
+preferencesTeachers = pd.read_excel(filePath, sheet_name='Preferencias')
 
 
 #####################################################
@@ -31,8 +31,9 @@ class GlobalData:
         self.colorsSchedules = createColors(self.settings)
         self.colorsUsed = []
         self.matrixRestrictionsTeachers = creatematrixSchedules(restrictionsTeachers)
-        self.matrixPreferencesTeachers = creatematrixSchedules(preferences)
+        self.matrixPreferencesTeachers = creatematrixSchedules(preferencesTeachers)
         self.matrixRestrictionsClasses = creatematrixSchedules(restrictionsClass)
+        self.metedPreferences = {}
 
 class Vertex:
     def __init__(self, id, teacher, schoolClass, theme):
@@ -46,7 +47,7 @@ class Vertex:
         self.adjacents = []
         self.satur = 0
         self.degree = 0
-        self.schedule = ''
+        self.preference = False
 
     def addAdjacent(self, vertex):
         self.adjacents.append(vertex)
@@ -68,10 +69,12 @@ class Vertex:
     def upSaturAdjacents(self):
         for vertex in self.adjacents:
             vertex.upSatur()
+
     # Usado exclusivamente por Dsatur
     def setColor(self, c):
         self.color = c
         self.upSaturAdjacents()
+
 
 
 #####################################################
@@ -323,6 +326,7 @@ def dsatur(graph, colorsUsed):
         toColor(vertexBiggerSatur, colorsUsed)
     return True
 
+
 def improvement(graph, data):
 
     reducedColors = []
@@ -336,7 +340,7 @@ def improvement(graph, data):
                     i = 1
                     colorful = False
                     while i in data.colorsSchedules.values() and not colorful:
-                        if v.color != i and i not in v.restrictionsColors:
+                        if v.color != i and i not in v.restrictionsColors and not v.preference:
                             valid = True
 
                             for adj in v.adjacents:
@@ -351,6 +355,56 @@ def improvement(graph, data):
                             if v.color not in data.colorsUsed:
                                 data.colorsUsed.append(v.color)
                         i += 1
+
+
+def setColorsPreferencesBeforeDsatur(graph, data):
+
+    vertexByTecher = {}
+    for v in graph:
+        if v.teacher in vertexByTecher.keys():
+            vertexByTecher[v.teacher].append(v)
+        else:
+            vertexByTecher[v.teacher] = [v]
+
+    for teacher, vertexList in vertexByTecher.items():
+        if teacher in data.matrixPreferencesTeachers.keys():
+            if teacher in vertexByTecher.keys():
+                preferences = data.matrixPreferencesTeachers[teacher]
+                preferencesCount = 0
+                preferencesMetedCount = 0
+                notColorful = []
+                for day in preferences.keys():
+                    preferencesCount += len(preferences[day])
+                    for schedule in preferences[day]:
+                        color = data.colorsSchedules[day+'-'+schedule]
+                        colorful = False
+
+                        for v in vertexList:
+                            if v.color == 0 and color not in v.restrictionsColors:
+                                valid = True
+
+                                for adj in v.adjacents:
+                                    if adj.color == color:
+                                        valid = False
+
+                                if valid:
+                                    v.setColor(color)
+                                    v.preference = True
+                                    preferencesMetedCount += 1
+                                    colorful = True
+                                    break
+
+                        if not colorful:
+                            notColorful.append('nao coloriu ' + str(color) + ' para ' + teacher)
+                if preferencesMetedCount == preferencesCount:
+                    data.metedPreferences[teacher] = True
+                else:
+                    print(notColorful)
+                    data.metedPreferences[teacher] = False
+
+        else:
+            data.metedPreferences[teacher] = True
+
 
 #####################################################
 ####         Algoritmos - Fim
@@ -415,9 +469,16 @@ def main():
     data = GlobalData()
     graph = createGraph(data)
 
+    setColorsPreferencesBeforeDsatur(graph, data)
     if dsatur(graph, data.colorsUsed):
         improvement(graph, data)
-        generateCsv(graph, data)
+        # generateCsv(graph, data)
+        print(data.metedPreferences)
+
+        if len(data.colorsSchedules) >= len(data.colorsUsed):
+            print('Sucesso')
+        else:
+            print('Opa, mais cores que o ideal :/')
     else:
         print('Erro ao executar o Dsatur')
 
